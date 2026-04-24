@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Password Secure Tool</title>
+
+<style>
+body {
+    margin: 0;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #141e30, #243b55);
+    font-family: Arial, sans-serif;
+    color: white;
+}
+
+.container {
+    width: 380px;
+    padding: 25px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+h2 {
+    text-align: center;
+}
+
+input, button {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: none;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+button {
+    background: #00c9a7;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #00a98b;
+}
+
+/* SLIDER */
+input[type="range"] {
+    padding: 0;
+    height: 6px;
+    background: rgba(255,255,255,0.3);
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    background: #00c9a7;
+    border-radius: 50%;
+}
+
+/* BAR */
+.progress-bar {
+    height: 10px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 10px;
+}
+
+.progress {
+    height: 100%;
+    width: 0%;
+    transition: 0.3s;
+}
+
+.row {
+    display: flex;
+    gap: 10px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🔐 Password Tool</h2>
+
+<input type="password" id="password" placeholder="Test ton mot de passe">
+
+<div class="progress-bar">
+    <div class="progress" id="progress"></div>
+</div>
+
+<div id="result"></div>
+<div id="time" style="font-size:13px;"></div>
+<div id="advice" style="font-size:13px;"></div>
+
+<h3>⚙️ Générateur</h3>
+
+<label>Longueur : <span id="lengthValue">12</span></label>
+<input type="range" id="length" min="6" max="40" value="12">
+
+<label><input type="checkbox" id="uppercase" checked> Majuscules</label>
+<label><input type="checkbox" id="lowercase" checked> Minuscules</label>
+<label><input type="checkbox" id="numbers" checked> Chiffres</label>
+<label><input type="checkbox" id="symbols"> Symboles</label>
+
+<button onclick="generatePassword()">Générer</button>
+
+<div class="row">
+    <input type="text" id="generated" readonly>
+    <button onclick="copyPassword()">📋</button>
+</div>
+
+</div>
+
+<script>
+
+// ===== SLIDER =====
+document.getElementById("length").addEventListener("input", () => {
+    document.getElementById("lengthValue").textContent =
+        document.getElementById("length").value;
+});
+
+// ===== PASSWORD CHECK =====
+document.getElementById("password").addEventListener("input", checkPassword);
+
+function checkPassword() {
+    const p = document.getElementById("password").value;
+
+    let score = 0;
+    let advice = [];
+
+    if (p.length >= 12) score++; else advice.push("+ long");
+    if (/[A-Z]/.test(p)) score++; else advice.push("majuscule");
+    if (/[a-z]/.test(p)) score++; else advice.push("minuscule");
+    if (/[0-9]/.test(p)) score++; else advice.push("chiffre");
+    if (/[^A-Za-z0-9]/.test(p)) score++; else advice.push("symbole");
+
+    let percent = (score / 5) * 100;
+
+    let color = score <= 2 ? "red" : score <= 4 ? "orange" : "limegreen";
+
+    const bar = document.getElementById("progress");
+    bar.style.width = percent + "%";
+    bar.style.background = color;
+
+    document.getElementById("result").textContent =
+        score <= 2 ? "Faible ❌" :
+        score <= 4 ? "Moyen ⚠️" : "Fort ✅";
+
+    document.getElementById("result").style.color = color;
+    document.getElementById("advice").textContent = advice.join(" • ");
+
+    document.getElementById("time").textContent =
+        "⏱️ Crack estimé : " + estimateTime(p);
+}
+
+// ===== ENTROPY REALISTE =====
+function estimateTime(p) {
+    let charset = 0;
+
+    if (/[a-z]/.test(p)) charset += 26;
+    if (/[A-Z]/.test(p)) charset += 26;
+    if (/[0-9]/.test(p)) charset += 10;
+    if (/[^A-Za-z0-9]/.test(p)) charset += 40;
+
+    if (!charset) return "instantané";
+
+    let entropy = p.length * Math.log2(charset);
+
+    // 💻 attaque réaliste moderne
+    let guessesPerSecond = 1e10;
+
+    let seconds = Math.pow(2, entropy) / guessesPerSecond;
+
+    if (seconds < 1) return "instantané";
+    if (seconds < 60) return "quelques secondes";
+    if (seconds < 3600) return Math.floor(seconds/60) + " min";
+    if (seconds < 86400) return Math.floor(seconds/3600) + " h";
+    if (seconds < 31536000) return Math.floor(seconds/86400) + " jours";
+    if (seconds < 3.1536e8) return Math.floor(seconds/31536000) + " ans";
+    if (seconds < 3.1536e10) return "milliers d'années 🔥";
+    if (seconds < 3.1536e13) return "millions d'années 🔥🔥";
+    return "quasi incassable 🛡️";
+}
+
+// ===== GENERATE SECURE =====
+function generatePassword() {
+    const length = document.getElementById("length").value;
+
+    let chars = "";
+    if (document.getElementById("uppercase").checked) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    if (document.getElementById("lowercase").checked) chars += "abcdefghijklmnopqrstuvwxyz";
+    if (document.getElementById("numbers").checked) chars += "0123456789";
+    if (document.getElementById("symbols").checked) chars += "!@#$%^&*()_+[]{}|;:,.<>?";
+
+    if (!chars) return alert("Choisis au moins une option");
+
+    let pass = "";
+    const rand = new Uint32Array(length);
+    crypto.getRandomValues(rand);
+
+    for (let i = 0; i < length; i++) {
+        pass += chars[rand[i] % chars.length];
+    }
+
+    document.getElementById("generated").value = pass;
+}
+
+// ===== COPY FIX =====
+function copyPassword() {
+    const text = document.getElementById("generated").value;
+
+    if (!text) return alert("Aucun mot de passe");
+
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text)
+            .then(() => alert("📋 Copié !"))
+            .catch(() => fallbackCopy());
+    } else {
+        fallbackCopy();
+    }
+}
+
+function fallbackCopy() {
+    const input = document.getElementById("generated");
+    input.select();
+    document.execCommand("copy");
+    window.getSelection().removeAllRanges();
+}
+
+// ===== TOGGLE =====
+function togglePassword() {
+    const input = document.getElementById("password");
+    input.type = input.type === "password" ? "text" : "password";
+}
+
+</script>
+
+</body>
+</html>
